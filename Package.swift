@@ -5,6 +5,10 @@ import PackageDescription
 
 let package = Package(
     name: "KeychainSecurity",
+    platforms: [
+            .iOS(.v14),
+            // other platforms if needed
+        ],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
         .library(

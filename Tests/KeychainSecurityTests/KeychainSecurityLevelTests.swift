@@ -1,5 +1,5 @@
 import XCTest
-@testable import TestKeychain
+@testable import KeychainSecurity
 
 final class KeychainSecurityLevelTests: XCTestCase {
 

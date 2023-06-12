@@ -80,7 +80,7 @@ extension SecureEnclave {
 
         var error: Unmanaged<CFError>?
 
-        let algorithm: SecKeyAlgorithm = .eciesEncryptionCofactorX963SHA256AESGCM
+        let algorithm: SecKeyAlgorithm = .eciesEncryptionStandardVariableIVX963SHA512AESGCM
 
         guard SecKeyIsAlgorithmSupported(publicKey, .encrypt, algorithm) else {
             throw KeychainError.algorithmNotSupported
@@ -104,7 +104,7 @@ extension SecureEnclave {
 
         var error: Unmanaged<CFError>?
 
-        let algorithm: SecKeyAlgorithm = .eciesEncryptionCofactorX963SHA256AESGCM
+        let algorithm: SecKeyAlgorithm = .eciesEncryptionStandardVariableIVX963SHA512AESGCM
 
         guard let result = SecKeyCreateDecryptedData(privateKey,
                                                algorithm,

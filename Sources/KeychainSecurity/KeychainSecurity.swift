@@ -62,6 +62,10 @@ extension KeychainSecurity {
 //MARK: - Read
 extension KeychainSecurity {
     public func getItem(withKey key: String, forService service: String) throws -> KeychainItem? {
+
+        logger.info("Get Keychain Item k: \(key) s:\(service) - Start")
+        defer { logger.info("Get Keychain Item k: \(key) s:\(service) - Done") }
+
         if let item = try fetchItem(withKey: key, forService: service) {
             return item
         }
@@ -307,7 +311,6 @@ extension KeychainSecurity {
         return result
     }
 }
-
 
 extension Date {
     public static var now: Date {

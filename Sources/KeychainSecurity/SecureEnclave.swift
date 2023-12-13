@@ -10,8 +10,8 @@ class SecureEnclave {
 extension SecureEnclave {
     public func generatePrivateKey(tag: String) throws -> SecKey {
 
-        Logger().info("SE generatePrivateKey - Start")
-        defer { Logger().info("SE generatePrivateKey - Done") }
+        logger.info("SE generatePrivateKey - Start")
+        defer { logger.info("SE generatePrivateKey - Done") }
         
         let accessControl = SecAccessControlCreateWithFlags(nil,
                                                             kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
@@ -39,8 +39,8 @@ extension SecureEnclave {
 
     public func fetchPrivateKey(tag: String) throws -> SecKey? {
         
-        Logger().info("SE fetchPrivateKey - Start")
-        defer { Logger().info("SE fetchPrivateKey - Done") }
+        logger.info("SE fetchPrivateKey - Start")
+        defer { logger.info("SE fetchPrivateKey - Done") }
         
         let query: [String: Any] = [
             kSecClass as String: kSecClassKey,
@@ -75,8 +75,8 @@ extension SecureEnclave {
 extension SecureEnclave {
     public func encrypt(_ message: Data, publicKey: SecKey) throws -> Data {
 
-        Logger().info("SE encrypt - Start")
-        defer { Logger().info("SE encrypt - Done") }
+        logger.info("SE encrypt - Start")
+        defer { logger.info("SE encrypt - Done") }
 
         var error: Unmanaged<CFError>?
 
@@ -99,8 +99,8 @@ extension SecureEnclave {
     public func decrypt(message: Data,
                         privateKey: SecKey) throws -> Data {
         
-        Logger().info("SE decrypt - Start")
-        defer { Logger().info("SE decrypt - Done") }
+        logger.info("SE decrypt - Start")
+        defer { logger.info("SE decrypt - Done") }
 
         var error: Unmanaged<CFError>?
 

@@ -59,7 +59,7 @@ public enum KeychainError: Error, LocalizedError {
             self = .authFailed
         default:
             self = .unowned(error)
-            Logger().info("Undefined OSStatus \(error)")
+            logger.info("Undefined OSStatus \(error)")
         }
     }
 

@@ -19,19 +19,19 @@ public class KeychainSecurity: KeychainAccess {
     
     public func store(item: KeychainItem, withSecurityLevel level: KeychainSecurityLevel) throws {
         
-        Logger().info("SetKeychain \(item.key) level: \(level) - Start")
-        defer { Logger().info("SetKeychain \(item.key) level: \(level) - Done") }
+        logger.info("SetKeychain \(item.key) level: \(level) - Start")
+        defer { logger.info("SetKeychain \(item.key) level: \(level) - Done") }
         
         var backupItem = item
         backupItem.key = backupKey(originKey: item.key)
         let backupQuery = try storeQuery(item: backupItem, withSecurityLevel: level)
         
         var resultCode = SecItemAdd(backupQuery, nil)
-        Logger().info("SetKeychain - Add \(backupItem.key) result code \(resultCode)")
+        logger.info("SetKeychain - Add \(backupItem.key) result code \(resultCode)")
         
         if resultCode != errSecSuccess {
             let error = KeychainError(error: resultCode)
-            Logger().info("SetKeychain - Error \(backupItem.key) Warn \(resultCode) \(error.localizedDescription)")
+            logger.info("SetKeychain - Error \(backupItem.key) Warn \(resultCode) \(error.localizedDescription)")
             throw error
         }
         
@@ -40,13 +40,13 @@ public class KeychainSecurity: KeychainAccess {
         try delete(withKey: item.key, forService: item.service)
         
         resultCode = SecItemAdd(query, nil)
-        Logger().info("SetKeychain - Add \(item.key) result code \(resultCode)")
+        logger.info("SetKeychain - Add \(item.key) result code \(resultCode)")
         
         if resultCode == errSecSuccess {
             try delete(withKey: backupItem.key, forService: item.service)
         } else {
             let error = KeychainError(error: resultCode)
-            Logger().info("SetKeychain - Error \(item.key) Warn \(resultCode) \(error.localizedDescription)")
+            logger.info("SetKeychain - Error \(item.key) Warn \(resultCode) \(error.localizedDescription)")
             throw error
         }
     }
@@ -56,15 +56,15 @@ public class KeychainSecurity: KeychainAccess {
             return item
         }
         if let item = try fetchItem(withKey: backupKey(originKey: key), forService: service) {
-            Logger().info("Get Item withKey \(key) - warn using backup key")
+            logger.info("Get Item withKey \(key) - warn using backup key")
             return item
         }
         return nil
     }
     
     public func delete(withKey key: String, forService service: String) throws {
-        Logger().info("DeleteKeychain \(key) - Start")
-        defer { Logger().info("DeleteKeychain \(key) - Done") }
+        logger.info("DeleteKeychain \(key) - Start")
+        defer { logger.info("DeleteKeychain \(key) - Done") }
         
         var query = [String: Any]()
         
@@ -75,12 +75,12 @@ public class KeychainSecurity: KeychainAccess {
         let status = SecItemDelete(query as CFDictionary)
         
         if status == errSecSuccess {
-            Logger().info("DeleteKeychain \(key) - errSecSuccess")
+            logger.info("DeleteKeychain \(key) - errSecSuccess")
         } else if status == errSecItemNotFound {
-            Logger().info("DeleteKeychain \(key) - errSecItemNotFound")
+            logger.info("DeleteKeychain \(key) - errSecItemNotFound")
         } else {
             let error = KeychainError(error: status)
-            Logger().info("DeleteKeychain k:\(key) s:\(service) - Warn \(status) \(error.localizedDescription)")
+            logger.info("DeleteKeychain k:\(key) s:\(service) - Warn \(status) \(error.localizedDescription)")
             throw error
         }
     }
@@ -139,27 +139,27 @@ extension KeychainSecurity {
         if status == errSecSuccess {
             
             guard let result = queryResult as? [String: Any] else {
-                Logger().info("GetKeychainItem k:\(key) s:\(service) - Warn convert to [String:Any]")
+                logger.info("GetKeychainItem k:\(key) s:\(service) - Warn convert to [String:Any]")
                 throw KeychainError.dataConvert
             }
             
             guard let key = result[kSecAttrAccount as String] as? String else {
-                Logger().info("GetKeychainItem - Warn parsing kSecAttrAccount")
+                logger.info("GetKeychainItem - Warn parsing kSecAttrAccount")
                 throw KeychainError.dataConvert
             }
             
             guard let service = result[kSecAttrService as String] as? String else {
-                Logger().info("GetKeychainItem k:\(key) - Warn parsing kSecAttrService")
+                logger.info("GetKeychainItem k:\(key) - Warn parsing kSecAttrService")
                 throw KeychainError.dataConvert
             }
             
             guard var value = result[kSecValueData as String] as? Data else {
-                Logger().info("GetKeychainItem k:\(key) s:\(service) - Warn parsing kSecValueData")
+                logger.info("GetKeychainItem k:\(key) s:\(service) - Warn parsing kSecValueData")
                 throw KeychainError.dataConvert
             }
             
             guard let description = result[kSecAttrDescription as String] as? String else {
-                Logger().info("GetKeychainItem k:\(key) s:\(service) - Warn parsing kSecAttrDescription")
+                logger.info("GetKeychainItem k:\(key) s:\(service) - Warn parsing kSecAttrDescription")
                 throw KeychainError.dataConvert
             }
             
@@ -173,7 +173,7 @@ extension KeychainSecurity {
             return nil
         } else {
             let error = KeychainError(error: status)
-            Logger().info("GetKeychainItem k:\(key) s:\(service) - Warn \(status) \(error.localizedDescription)")
+            logger.info("GetKeychainItem k:\(key) s:\(service) - Warn \(status) \(error.localizedDescription)")
             throw error
         }
     }

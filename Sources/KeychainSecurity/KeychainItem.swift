@@ -7,7 +7,7 @@ public struct KeychainItem: Hashable {
         self.value = value
     }
 
-    public init(withMock user: String) {
+    init(withMock user: String) {
         self.key = user + "key"
         self.service = user
         self.value = UUID().uuidString.data(using: .utf8)!

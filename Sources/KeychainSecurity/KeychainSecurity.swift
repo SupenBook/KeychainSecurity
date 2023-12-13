@@ -5,6 +5,8 @@ public protocol KeychainAccess {
     
     func getItem(withKey key: String, forService service: String) throws -> KeychainItem?
     
+    func getAllItem(service: String) throws -> [String: KeychainItem]
+    
     func delete(withKey key: String, forService service: String) throws
 }
 
@@ -17,6 +19,11 @@ public class KeychainSecurity: KeychainAccess {
     private lazy var secureEnclave: SecureEnclave = .init()
     private lazy var secureEnclavePrivateKeyTag = "secureEnclavePrivateKeyTag"
     
+    private var lastReadTime: Date = .distantPast
+}
+
+//MAKR: - Create & Update
+extension KeychainSecurity {
     public func store(item: KeychainItem, withSecurityLevel level: KeychainSecurityLevel) throws {
         
         logger.info("SetKeychain \(item.key) level: \(level) - Start")
@@ -50,7 +57,10 @@ public class KeychainSecurity: KeychainAccess {
             throw error
         }
     }
-    
+}
+
+//MARK: - Read
+extension KeychainSecurity {
     public func getItem(withKey key: String, forService service: String) throws -> KeychainItem? {
         if let item = try fetchItem(withKey: key, forService: service) {
             return item
@@ -62,6 +72,78 @@ public class KeychainSecurity: KeychainAccess {
         return nil
     }
     
+    public func getAllItem(service: String) throws -> [String: KeychainItem] {
+        
+        logger.info("Get All Keychain Item s:\(service) - Start")
+        defer { logger.info("Get All Keychain Item s:\(service) - Done") }
+        
+        delayIfNeeded(delayTimeInSeconds: 2)
+        
+        var fullResult: [String: KeychainItem] = [:]
+        
+        let itemClasses: [CFString] = [kSecClassGenericPassword,
+                                       kSecClassInternetPassword,
+                                       kSecClassCertificate,
+                                       kSecClassKey,
+                                       kSecClassIdentity]
+        
+        var query = [String: Any]()
+        query[kSecAttrService as String] = service
+        query[kSecAttrSynchronizable as String] = kSecAttrSynchronizableAny
+        query[kSecReturnAttributes as String] = kCFBooleanTrue
+        query[kSecReturnData as String] = kCFBooleanTrue
+        query[kSecMatchLimit as String] = kSecMatchLimitAll
+        
+        for itemClass in itemClasses {
+            query[kSecClass as String] = itemClass
+            
+            var queryResult: AnyObject?
+            let status = withUnsafeMutablePointer(to: &queryResult) {
+                SecItemCopyMatching(query as CFDictionary, UnsafeMutablePointer($0))
+            }
+            
+            if status == noErr {
+                
+                guard let results: [[String: Any]] = queryResult as? [[String: Any]] else {
+                    logger.info("GetAllKeychainItem s:\(service) - Warn convert to [[String:Any]]")
+                    throw KeychainError.dataConvert
+                }
+                
+                for result in results {
+                    guard let key = result[kSecAttrAccount as String] as? String,
+                          let value = result[kSecValueData as String] as? Data,
+                          let service = result[kSecAttrService as String] as? String
+                    else {
+                        logger.info("GetAllKeychainItem s:\(service) - Warn parsing content")
+                        throw KeychainError.dataConvert
+                    }
+                    
+                    fullResult[key] = .init(key: key,
+                                            service: service,
+                                            value: value)
+                }
+                
+                logger.info("GetAllKeychainItem - \(itemClass) Done rc:\(results.count)")
+                
+            } else if status == errSecNoSuchAttr {
+                let error = KeychainError(error: status)
+                logger.info("GetAllKeychainItem - \(itemClass) \(status) \(error.localizedDescription)")
+            } else if status == errSecItemNotFound {
+                let error = KeychainError(error: status)
+                logger.info("GetAllKeychainItem - \(itemClass) \(status) \(error.localizedDescription)")
+            } else {
+                let error = KeychainError(error: status)
+                logger.info("GetAllKeychainItem - Warn \(itemClass) \(status) \(error.localizedDescription)")
+                throw error
+            }
+        }
+        
+        return fullResult
+    }
+}
+
+//MARK: - Delete
+extension KeychainSecurity {
     public func delete(withKey key: String, forService service: String) throws {
         logger.info("DeleteKeychain \(key) - Start")
         defer { logger.info("DeleteKeychain \(key) - Done") }
@@ -158,13 +240,13 @@ extension KeychainSecurity {
                 throw KeychainError.dataConvert
             }
             
-            guard let description = result[kSecAttrDescription as String] as? String else {
+            if let description = result[kSecAttrDescription as String] as? String{
+                if description == KeychainSecurityLevel.high.attrDescription {
+                    value = try decrypt(value)
+                }
+            } else {
                 logger.info("GetKeychainItem k:\(key) s:\(service) - Warn parsing kSecAttrDescription")
                 throw KeychainError.dataConvert
-            }
-            
-            if description == KeychainSecurityLevel.high.attrDescription {
-                value = try decrypt(value)
             }
             
             return .init(key: key, service: service, value: value)
@@ -180,6 +262,20 @@ extension KeychainSecurity {
     
     private func backupKey(originKey: String) -> String {
         return originKey + "_backup"
+    }
+    
+    private func delayIfNeeded(delayTimeInSeconds: TimeInterval) {
+        
+        let executableTime = lastReadTime.advanced(by: delayTimeInSeconds)
+        
+        let currentTime = Date.now
+        
+        if currentTime < executableTime {
+            logger.info("Keychain Security - need delay until \(executableTime)")
+            Thread.sleep(until: executableTime)
+        }
+        
+        lastReadTime = Date.now
     }
 }
 
@@ -209,5 +305,12 @@ extension KeychainSecurity {
         let result = try secureEnclave.decrypt(message: message, privateKey: privateKey)
         
         return result
+    }
+}
+
+
+extension Date {
+    public static var now: Date {
+        Date(timeIntervalSince1970: Date().timeIntervalSince1970)
     }
 }

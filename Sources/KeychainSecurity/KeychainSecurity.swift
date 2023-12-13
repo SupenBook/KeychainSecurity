@@ -114,17 +114,10 @@ extension KeychainSecurity {
                 }
                 
                 for result in results {
-                    guard let key = result[kSecAttrAccount as String] as? String,
-                          let value = result[kSecValueData as String] as? Data,
-                          let service = result[kSecAttrService as String] as? String
-                    else {
-                        logger.info("GetAllKeychainItem s:\(service) - Warn parsing content")
-                        throw KeychainError.dataConvert
-                    }
                     
-                    fullResult[key] = .init(key: key,
-                                            service: service,
-                                            value: value)
+                    let item = try convert(result: result)
+                    
+                    fullResult[item.key] = item
                 }
                 
                 logger.info("GetAllKeychainItem - \(itemClass) Done rc:\(results.count)")
@@ -144,6 +137,8 @@ extension KeychainSecurity {
         
         return fullResult
     }
+    
+
 }
 
 //MARK: - Delete
@@ -229,31 +224,7 @@ extension KeychainSecurity {
                 throw KeychainError.dataConvert
             }
             
-            guard let key = result[kSecAttrAccount as String] as? String else {
-                logger.info("GetKeychainItem - Warn parsing kSecAttrAccount")
-                throw KeychainError.dataConvert
-            }
-            
-            guard let service = result[kSecAttrService as String] as? String else {
-                logger.info("GetKeychainItem k:\(key) - Warn parsing kSecAttrService")
-                throw KeychainError.dataConvert
-            }
-            
-            guard var value = result[kSecValueData as String] as? Data else {
-                logger.info("GetKeychainItem k:\(key) s:\(service) - Warn parsing kSecValueData")
-                throw KeychainError.dataConvert
-            }
-            
-            if let description = result[kSecAttrDescription as String] as? String{
-                if description == KeychainSecurityLevel.high.attrDescription {
-                    value = try decrypt(value)
-                }
-            } else {
-                logger.info("GetKeychainItem k:\(key) s:\(service) - Warn parsing kSecAttrDescription")
-                throw KeychainError.dataConvert
-            }
-            
-            return .init(key: key, service: service, value: value)
+           return try convert(result: result)
             
         } else if status == errSecItemNotFound {
             return nil
@@ -262,6 +233,34 @@ extension KeychainSecurity {
             logger.info("GetKeychainItem k:\(key) s:\(service) - Warn \(status) \(error.localizedDescription)")
             throw error
         }
+    }
+    
+    private func convert(result: [String: Any]) throws -> KeychainItem {
+        guard let key = result[kSecAttrAccount as String] as? String else {
+            logger.info("Convert result - Warn parsing kSecAttrAccount")
+            throw KeychainError.dataConvert
+        }
+        
+        guard let service = result[kSecAttrService as String] as? String else {
+            logger.info("Convert result k:\(key) - Warn parsing kSecAttrService")
+            throw KeychainError.dataConvert
+        }
+        
+        guard var value = result[kSecValueData as String] as? Data else {
+            logger.info("Convert result k:\(key) s:\(service) - Warn parsing kSecValueData")
+            throw KeychainError.dataConvert
+        }
+        
+        if let description = result[kSecAttrDescription as String] as? String{
+            if description == KeychainSecurityLevel.high.attrDescription {
+                value = try decrypt(value)
+            }
+        } else {
+            logger.info("GetKeychainItem k:\(key) s:\(service) - Warn parsing kSecAttrDescription")
+            throw KeychainError.dataConvert
+        }
+        
+        return .init(key: key, service: service, value: value)
     }
     
     private func backupKey(originKey: String) -> String {

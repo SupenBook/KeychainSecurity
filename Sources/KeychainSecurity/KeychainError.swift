@@ -25,6 +25,7 @@ public enum KeychainError: Error, LocalizedError {
     case secureEnclaveDecrypt(String)
     case secKeyCreateWithData(String)
     case secKeyCopyExternalRepresentation(String)
+    case emptyKeyValue
     case unowned(OSStatus)
 
     init(error: OSStatus) {
@@ -115,6 +116,8 @@ public enum KeychainError: Error, LocalizedError {
             return "secKeyCopyExternalRepresentation \(desc)"
         case .createPublicKey:
             return "createPublicKey error"
+        case .emptyKeyValue:
+            return "emptyKeyValue"
         }
     }
 }

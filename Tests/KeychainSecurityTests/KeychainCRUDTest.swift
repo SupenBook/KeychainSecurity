@@ -48,7 +48,7 @@ final class KeychainCRUDTest: XCTestCase {
         securityLevels.forEach { level in
             helper.clearKeychain(service: testService)
             
-            var expectItem = KeychainItem(withMock: testService)
+            let expectItem = KeychainItem(withMock: testService)
             
             try! keychain.store(item: expectItem,
                                 withSecurityLevel: level)
@@ -65,6 +65,27 @@ final class KeychainCRUDTest: XCTestCase {
                                                  forService: expectItem.service)
             
             XCTAssertEqual(testItem, nil)
+        }
+    }
+    
+    func testReadAll() {
+        helper.clearKeychain(service: testService)
+        
+        var expectItems: [String: KeychainItem] = [:]
+        
+        for i in 0...100 {
+            let item = KeychainItem(withMock: "\(i)MockKey")
+            expectItems[item.key] = item
+        }
+        
+        for item in expectItems {
+            try! keychain.store(item: item.value, withSecurityLevel: securityLevels.randomElement()!)
+        }
+        
+        let resultItems = try! keychain.getAllItem(service: testService)
+        
+        for item in resultItems {
+            XCTAssertEqual(item.value, expectItems[item.key])
         }
     }
 }

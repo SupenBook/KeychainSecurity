@@ -51,6 +51,16 @@ final class KeychainSecurityLevelTests: XCTestCase {
         XCTAssertEqual(testItem, expectItem)
     }
     
+    func testLevelHighStore() {
+        cleanEnv()
+        
+        let expectItem = KeychainItem(withMock: highUser)
+        
+        try! keychain.store(item: expectItem,
+                            withSecurityLevel: .high)
+        
+    }
+    
     private func cleanEnv() {
         helper.clearKeychain(service: lowUser)
         helper.clearKeychain(service: middleUser)

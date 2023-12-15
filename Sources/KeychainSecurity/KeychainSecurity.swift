@@ -257,7 +257,6 @@ extension KeychainSecurity {
             }
         } else {
             logger.info("GetKeychainItem k:\(key) s:\(service) - Warn parsing kSecAttrDescription")
-            throw KeychainError.dataConvert
         }
         
         return .init(key: key, service: service, value: value)

@@ -10,9 +10,11 @@ final class KeychainSecurityLevelTests: XCTestCase {
     var middleUser:String = "middleUser"
     var highUser:String = "highUser"
     
+    let testService: String = "TestService"
+    
     func testLevelLow() {
         cleanEnv()
-        let expectItem = KeychainItem(withMock: lowUser)
+        let expectItem = KeychainItem(withMock: lowUser, service: testService)
         
         try! keychain.store(item: expectItem,
                             withSecurityLevel: .low)
@@ -26,7 +28,7 @@ final class KeychainSecurityLevelTests: XCTestCase {
     func testLevelMiddle() {
         cleanEnv()
         
-        let expectItem = KeychainItem(withMock: middleUser)
+        let expectItem = KeychainItem(withMock: middleUser, service: testService)
         
         try! keychain.store(item: expectItem,
                             withSecurityLevel: .middle)
@@ -40,7 +42,7 @@ final class KeychainSecurityLevelTests: XCTestCase {
     func testLevelHigh() {
         cleanEnv()
         
-        let expectItem = KeychainItem(withMock: highUser)
+        let expectItem = KeychainItem(withMock: highUser, service: testService)
         
         try! keychain.store(item: expectItem,
                             withSecurityLevel: .high)
@@ -54,7 +56,7 @@ final class KeychainSecurityLevelTests: XCTestCase {
     func testLevelHighStore() {
         cleanEnv()
         
-        let expectItem = KeychainItem(withMock: highUser)
+        let expectItem = KeychainItem(withMock: highUser, service: testService)
         
         try! keychain.store(item: expectItem,
                             withSecurityLevel: .high)

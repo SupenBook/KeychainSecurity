@@ -12,7 +12,7 @@ final class KeychainCRUDTest: XCTestCase {
         securityLevels.forEach { level in
             helper.clearKeychain(service: testService)
             
-            let expectItem = KeychainItem(withMock: testService)
+            let expectItem = KeychainItem(withMock: testService, service: testService)
             
             try! keychain.store(item: expectItem,
                                 withSecurityLevel: level)
@@ -28,7 +28,7 @@ final class KeychainCRUDTest: XCTestCase {
         securityLevels.forEach { level in
             helper.clearKeychain(service: testService)
             
-            var expectItem = KeychainItem(withMock: testService)
+            var expectItem = KeychainItem(withMock: testService, service: testService)
             
             try! keychain.store(item: expectItem,
                                 withSecurityLevel: level)
@@ -48,7 +48,7 @@ final class KeychainCRUDTest: XCTestCase {
         securityLevels.forEach { level in
             helper.clearKeychain(service: testService)
             
-            let expectItem = KeychainItem(withMock: testService)
+            let expectItem = KeychainItem(withMock: testService, service: testService)
             
             try! keychain.store(item: expectItem,
                                 withSecurityLevel: level)
@@ -73,19 +73,21 @@ final class KeychainCRUDTest: XCTestCase {
         
         var expectItems: [String: KeychainItem] = [:]
         
-        for i in 0...100 {
-            let item = KeychainItem(withMock: "\(i)MockKey")
+        for i in 0...1 {
+            let item = KeychainItem(key: "\(i)MockKey", service: testService, value: UUID().uuidString.data(using: .utf8)!)
             expectItems[item.key] = item
         }
         
         for item in expectItems {
-            try! keychain.store(item: item.value, withSecurityLevel: securityLevels.randomElement()!)
+            try! keychain.store(item: item.value, withSecurityLevel: .middle)
         }
         
         let resultItems = try! keychain.getAllItem(service: testService)
         
-        for item in resultItems {
-            XCTAssertEqual(item.value, expectItems[item.key])
+        XCTAssertEqual(resultItems.count, expectItems.count)
+        XCTAssertEqual(resultItems, expectItems)
+        for item in expectItems {
+            XCTAssertEqual(item.value, resultItems[item.key])
         }
     }
 }

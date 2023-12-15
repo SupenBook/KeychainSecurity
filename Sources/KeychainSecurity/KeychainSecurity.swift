@@ -62,10 +62,10 @@ extension KeychainSecurity {
 //MARK: - Read
 extension KeychainSecurity {
     public func getItem(withKey key: String, forService service: String) throws -> KeychainItem? {
-
+        
         logger.info("Get Keychain Item k: \(key) s:\(service) - Start")
         defer { logger.info("Get Keychain Item k: \(key) s:\(service) - Done") }
-
+        
         if let item = try fetchItem(withKey: key, forService: service) {
             return item
         }
@@ -138,7 +138,7 @@ extension KeychainSecurity {
         return fullResult
     }
     
-
+    
 }
 
 //MARK: - Delete
@@ -187,6 +187,7 @@ extension KeychainSecurity {
         case .high:
             let encryptData = try encrypt(item.value)
             query[kSecValueData as String] = encryptData as CFData
+            isBiometricRequired = true
         }
         /*
          Touch ID must be available and enrolled with at least one finger, or Face ID must be available and enrolled. The item is still accessible by Touch ID if fingers are added or removed, or by Face ID if the user is re-enrolled.
@@ -224,7 +225,7 @@ extension KeychainSecurity {
                 throw KeychainError.dataConvert
             }
             
-           return try convert(result: result)
+            return try convert(result: result)
             
         } else if status == errSecItemNotFound {
             return nil

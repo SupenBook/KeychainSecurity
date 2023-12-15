@@ -73,7 +73,7 @@ final class KeychainCRUDTest: XCTestCase {
         
         var expectItems: [String: KeychainItem] = [:]
         
-        for i in 0...1 {
+        for i in 0...100 {
             let item = KeychainItem(key: "\(i)MockKey", service: testService, value: UUID().uuidString.data(using: .utf8)!)
             expectItems[item.key] = item
         }

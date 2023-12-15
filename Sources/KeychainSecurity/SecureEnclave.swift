@@ -15,7 +15,7 @@ extension SecureEnclave {
         
         let accessControl = SecAccessControlCreateWithFlags(nil,
                                                             kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-                                                            [.privateKeyUsage, .biometryAny],
+                                                            [.privateKeyUsage],
                                                             nil)!
         let attributes: [String: Any] = [
             kSecAttrKeyType as String: kSecAttrKeyTypeECSECPrimeRandom,

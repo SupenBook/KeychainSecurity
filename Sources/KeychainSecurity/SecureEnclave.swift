@@ -31,7 +31,6 @@ class SecureEnclave {
         
         return result
     }
-
 }
 
 // MARK: - Keys

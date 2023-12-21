@@ -43,7 +43,7 @@ public class KeychainSecurity: KeychainAccess {
     
     public func store(item: KeychainItem,
                       withSecurityLevel level: KeychainSecurityLevel) throws {
-        cache.set(serviceName: item.service, item: item)
+        try cache.set(serviceName: item.service, item: item)
         try keychainIO.store(item: item, withSecurityLevel: level)
     }
     
@@ -51,13 +51,13 @@ public class KeychainSecurity: KeychainAccess {
                         forService service: String,
                         isUsingCache: Bool = true) throws -> KeychainItem? {
         if isUsingCache,
-           let item = cache.service(serviceName: service)?.item(key: key) {
+           let item = try cache.service(serviceName: service)?.item(key: key) {
             return item
         } else {
             guard let item = try keychainIO.getItem(withKey: key, forService: service) else {
                 return nil
             }
-            cache.set(serviceName: service, item: item)
+            try cache.set(serviceName: service, item: item)
             return item
         }
     }
@@ -65,11 +65,11 @@ public class KeychainSecurity: KeychainAccess {
     public func getAllItem(service: String,
                            isUsingCache: Bool = true) throws -> [String: KeychainItem] {
         if isUsingCache,
-           let items = cache.service(serviceName: service)?.allItems() {
+           let items = try cache.service(serviceName: service)?.allItems() {
             return items
         } else {
             let items = try keychainIO.getAllItem(service: service)
-            cache.replace(serviceName: service, items: items)
+            try cache.replace(serviceName: service, items: items)
             return items
         }
     }

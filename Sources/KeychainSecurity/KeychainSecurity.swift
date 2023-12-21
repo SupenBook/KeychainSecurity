@@ -14,7 +14,7 @@ public protocol KeychainAccess {
     func delete(withKey key: String, forService service: String) throws
 }
 
-extension KeychainAccess {
+public extension KeychainAccess {
     func getItem(withKey key: String,
                  forService service: String,
                  isUsingCache: Bool = true) throws -> KeychainItem? {

@@ -3,12 +3,40 @@ import Foundation
 class SecureEnclave {
 
     public init() {}
+    
+    private lazy var secureEnclavePrivateKeyTag = "secureEnclavePrivateKeyTag"
+    
+    public func encrypt(_ message: Data) throws -> Data {
+        var privateKey = try fetchPrivateKey(tag: secureEnclavePrivateKeyTag)
+        
+        if privateKey == nil {
+            privateKey = try generatePrivateKey(tag: secureEnclavePrivateKeyTag)
+        }
+        
+        guard let publicKey = createPublicKey(privateKey!) else {
+            throw KeychainError.createPublicKey
+        }
+        
+        let result = try encrypt(message, publicKey: publicKey)
+        
+        return result
+    }
+    
+    public func decrypt(_ message: Data) throws -> Data {
+        guard let privateKey = try fetchPrivateKey(tag: secureEnclavePrivateKeyTag) else {
+            throw KeychainError.missSecureEnclavePrivateKey
+        }
+        
+        let result = try decrypt(message: message, privateKey: privateKey)
+        
+        return result
+    }
 
 }
 
 // MARK: - Keys
 extension SecureEnclave {
-    public func generatePrivateKey(tag: String) throws -> SecKey {
+    private func generatePrivateKey(tag: String) throws -> SecKey {
 
         logger.info("SE generatePrivateKey - Start")
         defer { logger.info("SE generatePrivateKey - Done") }
@@ -37,7 +65,7 @@ extension SecureEnclave {
         return privateKey
     }
 
-    public func fetchPrivateKey(tag: String) throws -> SecKey? {
+    private func fetchPrivateKey(tag: String) throws -> SecKey? {
         
         logger.info("SE fetchPrivateKey - Start")
         defer { logger.info("SE fetchPrivateKey - Done") }
@@ -66,14 +94,14 @@ extension SecureEnclave {
         }
     }
 
-    public func createPublicKey(_ privateKey: SecKey) -> SecKey? {
+    private func createPublicKey(_ privateKey: SecKey) -> SecKey? {
         SecKeyCopyPublicKey(privateKey)
     }
 }
 
 // MARK: - encrypt & decrypt
 extension SecureEnclave {
-    public func encrypt(_ message: Data, publicKey: SecKey) throws -> Data {
+    private func encrypt(_ message: Data, publicKey: SecKey) throws -> Data {
 
         logger.info("SE encrypt - Start")
         defer { logger.info("SE encrypt - Done") }
@@ -96,7 +124,7 @@ extension SecureEnclave {
         return resultData
     }
 
-    public func decrypt(message: Data,
+    private func decrypt(message: Data,
                         privateKey: SecKey) throws -> Data {
         
         logger.info("SE decrypt - Start")

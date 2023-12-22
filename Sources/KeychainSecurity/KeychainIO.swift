@@ -70,7 +70,7 @@ extension KeychainIO {
         return nil
     }
     
-    func getAllItem(service: String) throws -> [String: KeychainItem] {
+    func getAllItem(service: String?) throws -> [String: KeychainItem] {
         
         logger.info("KeychainIO getAllItem Keychain Item s:\(service) - Start")
         defer { logger.info("KeychainIO getAllItem Keychain Item s:\(service) - Done") }

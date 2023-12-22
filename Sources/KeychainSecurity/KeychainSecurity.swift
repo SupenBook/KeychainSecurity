@@ -1,6 +1,9 @@
 import Foundation
 
 public protocol KeychainAccess {
+    
+    var isSetupCache: Bool { get }
+    
     func store(item: KeychainItem,
                withSecurityLevel level: KeychainSecurityLevel) throws
     
@@ -12,6 +15,8 @@ public protocol KeychainAccess {
                     isUsingCache: Bool) throws -> [String: KeychainItem]
     
     func delete(withKey key: String, forService service: String) throws
+    
+    func setupCache(service: String) throws
 }
 
 public extension KeychainAccess {
@@ -40,6 +45,8 @@ public class KeychainSecurity: KeychainAccess {
     private lazy var secureEnclave: SecureEnclave = .init()
     
     private lazy var cache: KeychainCache = .init()
+    
+    public var isSetupCache: Bool = false
     
     public func store(item: KeychainItem,
                       withSecurityLevel level: KeychainSecurityLevel) throws {
@@ -89,5 +96,11 @@ public class KeychainSecurity: KeychainAccess {
         
         cache.delete(serviceName: service, key: key)
         try keychainIO.delete(withKey: key, forService: service)
+    }
+    
+    public func setupCache(service: String) throws {
+        let items = try keychainIO.getAllItem(service: service)
+        try cache.replace(serviceName: service, items: items)
+        isSetupCache = true
     }
 }

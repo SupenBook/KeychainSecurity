@@ -13,21 +13,33 @@ struct KeychainCache {
     private let lock = NSLock()
     
     func service(serviceName: String) -> Service? {
+        logger.info("KeychainCache service(serviceName:\(serviceName)) - Start")
         lock.lock()
-        defer { lock.unlock() }
+        defer {
+            lock.unlock()
+            logger.info("KeychainCache service(serviceName:\(serviceName)) - Done")
+        }
         return services[serviceName]
     }
     
     mutating func set(serviceName: String, item: KeychainItem) throws {
+        logger.info("KeychainCache set(serviceName:\(serviceName) key:\(item.key) - Start")
         lock.lock()
-        defer { lock.unlock() }
+        defer {
+            lock.unlock()
+            logger.info("KeychainCache set(serviceName:\(serviceName) key:\(item.key) - Done")
+        }
         var service: Service = services[serviceName] ?? .init(serviceName: serviceName)
         try service.set(item: item)
     }
     
     mutating func replace(serviceName: String, items: [String: KeychainItem]) throws {
+        logger.info("KeychainCache replace(serviceName:\(serviceName) items:\(items.count) - Start")
         lock.lock()
-        defer { lock.unlock() }
+        defer {
+            lock.unlock()
+            logger.info("KeychainCache replace(serviceName:\(serviceName) items:\(items.count) - Done")
+        }
         var service: Service = .init(serviceName: serviceName)
         try service.set(items: items)
         services[serviceName] = service
@@ -35,8 +47,12 @@ struct KeychainCache {
     }
     
     mutating func delete(serviceName: String, key: String) {
+        logger.info("KeychainCache delete(serviceName:\(serviceName) key:\(key) - Start")
         lock.lock()
-        defer { lock.unlock() }
+        defer {
+            lock.unlock()
+            logger.info("KeychainCache delete(serviceName:\(serviceName) key:\(key) - Done")
+        }
         guard var service = self.services[serviceName] else { return }
         service.delete(key: key)
         self.services[serviceName] = service

@@ -71,6 +71,10 @@ struct KeychainCache {
         }
         
         func item(key: String) throws -> KeychainItem? {
+            logger.info("KeychainCache item(key:\(key) - Start")
+            defer {
+                logger.info("KeychainCache item(key:\(key) - Done")
+            }
             guard var item = items[key] else { return nil }
             if needEncrypt {
                 item.value = try SecureEnclave().decrypt(item.value)
@@ -81,6 +85,10 @@ struct KeychainCache {
         }
         
         func allItems() throws -> [String: KeychainItem] {
+            logger.info("KeychainCache allItems - Start")
+            defer {
+                logger.info("KeychainCache allItems - Done")
+            }
             var result: [String: KeychainItem] = [:]
             for key in items.keys {
                 result[key] = try item(key: key)

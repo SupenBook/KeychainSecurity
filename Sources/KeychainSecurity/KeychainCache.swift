@@ -1,6 +1,6 @@
 //
 //  File.swift
-//  
+//
 //
 //  Created by Book on 2023/12/21.
 //
@@ -10,27 +10,36 @@ import Foundation
 struct KeychainCache {
     
     private var services: [String: Service] = [:]
+    private let lock = NSLock()
     
     func service(serviceName: String) -> Service? {
+        lock.lock()
+        defer { lock.unlock() }
         return services[serviceName]
     }
     
     mutating func set(serviceName: String, item: KeychainItem) throws {
+        lock.lock()
+        defer { lock.unlock() }
         var service: Service = services[serviceName] ?? .init(serviceName: serviceName)
         try service.set(item: item)
-        services[serviceName] = service
     }
     
     mutating func replace(serviceName: String, items: [String: KeychainItem]) throws {
+        lock.lock()
+        defer { lock.unlock() }
         var service: Service = .init(serviceName: serviceName)
         try service.set(items: items)
         services[serviceName] = service
+        
     }
     
     mutating func delete(serviceName: String, key: String) {
-        guard var service = services[serviceName] else { return }
+        lock.lock()
+        defer { lock.unlock() }
+        guard var service = self.services[serviceName] else { return }
         service.delete(key: key)
-        services[serviceName] = service
+        self.services[serviceName] = service
     }
     
     struct Service {

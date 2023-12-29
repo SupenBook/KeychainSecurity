@@ -1,6 +1,6 @@
 import Foundation
 
-class SecureEnclave {
+public class SecureEnclave {
 
     public init() {}
     

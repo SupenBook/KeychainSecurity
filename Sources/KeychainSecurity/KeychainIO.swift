@@ -1,6 +1,6 @@
 //
 //  File.swift
-//  
+//
 //
 //  Created by Book on 2023/12/21.
 //
@@ -18,7 +18,7 @@ class KeychainIO {
 extension KeychainIO {
     
     func store(item: KeychainItem,
-                       withSecurityLevel level: KeychainSecurityLevel) throws {
+               withSecurityLevel level: KeychainSecurityLevel) throws {
         
         logger.info("KeychainIO store \(item.key) level: \(level) - Start")
         defer { logger.info("KeychainIO store \(item.key) level: \(level) - Done") }
@@ -55,22 +55,22 @@ extension KeychainIO {
 
 //MARK: - Read
 extension KeychainIO {
-    func getItem(withKey key: String, forService service: String) throws -> KeychainItem? {
+    func getItem(withKey key: String, forService service: String, shouldDecryptIfNeeded: Bool) throws -> KeychainItem? {
         
         logger.info("KeychainIO getItem Item k: \(key) s:\(service) - Start")
         defer { logger.info("KeychainIO getItem Item k: \(key) s:\(service) - Done") }
         
-        if let item = try fetchItem(withKey: key, forService: service) {
+        if let item = try fetchItem(withKey: key, forService: service, shouldDecryptIfNeeded: shouldDecryptIfNeeded) {
             return item
         }
-        if let item = try fetchItem(withKey: backupKey(originKey: key), forService: service) {
+        if let item = try fetchItem(withKey: backupKey(originKey: key), forService: service, shouldDecryptIfNeeded: shouldDecryptIfNeeded) {
             logger.info("KeychainIO getItem withKey \(key) - warn using backup key")
             return item
         }
         return nil
     }
     
-    func getAllItem(service: String?) throws -> [String: KeychainItem] {
+    func getAllItem(service: String?, shouldDecryptIfNeeded: Bool) throws -> [String: KeychainItem] {
         
         logger.info("KeychainIO getAllItem Keychain Item s:\(service) - Start")
         defer { logger.info("KeychainIO getAllItem Keychain Item s:\(service) - Done") }
@@ -109,7 +109,7 @@ extension KeychainIO {
                 
                 for result in results {
                     
-                    let item = try convert(result: result)
+                    let item = try convert(result: result, shouldDecryptIfNeeded: shouldDecryptIfNeeded)
                     
                     fullResult[item.key] = item
                 }
@@ -198,7 +198,9 @@ extension KeychainIO {
         return query as CFDictionary
     }
     
-    private func fetchItem(withKey key: String, forService service: String) throws -> KeychainItem? {
+    private func fetchItem(withKey key: String,
+                           forService service: String,
+                           shouldDecryptIfNeeded: Bool) throws -> KeychainItem? {
         var query = [String: Any]()
         query[kSecAttrAccount as String] = key as CFString
         query[kSecAttrService as String] = service
@@ -217,7 +219,7 @@ extension KeychainIO {
                 throw KeychainError.dataConvert
             }
             
-            return try convert(result: result)
+            return try convert(result: result, shouldDecryptIfNeeded: shouldDecryptIfNeeded)
             
         } else if status == errSecItemNotFound {
             return nil
@@ -228,7 +230,7 @@ extension KeychainIO {
         }
     }
     
-    private func convert(result: [String: Any]) throws -> KeychainItem {
+    private func convert(result: [String: Any], shouldDecryptIfNeeded: Bool) throws -> KeychainItem {
         guard let key = result[kSecAttrAccount as String] as? String else {
             logger.info("KeychainIO convert - Warn parsing kSecAttrAccount")
             throw KeychainError.dataConvert
@@ -244,7 +246,8 @@ extension KeychainIO {
             throw KeychainError.dataConvert
         }
         
-        if let description = result[kSecAttrDescription as String] as? String{
+        if shouldDecryptIfNeeded,
+           let description = result[kSecAttrDescription as String] as? String{
             if description == KeychainSecurityLevel.high.attrDescription {
                 value = try secureEnclave.decrypt(value)
             }

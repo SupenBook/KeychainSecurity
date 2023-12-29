@@ -2,33 +2,29 @@ import Foundation
 
 public protocol KeychainAccess {
     
-    var isSetupCache: Bool { get }
-    
     func store(item: KeychainItem,
                withSecurityLevel level: KeychainSecurityLevel) throws
     
     func getItem(withKey key: String,
                  forService service: String,
-                 isUsingCache: Bool) throws -> KeychainItem?
+                 shouldDecryptIfNeeded: Bool) throws -> KeychainItem?
     
     func getAllItem(service: String,
-                    isUsingCache: Bool) throws -> [String: KeychainItem]
+                    shouldDecryptIfNeeded: Bool) throws -> [String: KeychainItem]
     
     func delete(withKey key: String, forService service: String) throws
-    
-    func setupCache(service: String) throws
 }
 
 public extension KeychainAccess {
     func getItem(withKey key: String,
                  forService service: String,
-                 isUsingCache: Bool = true) throws -> KeychainItem? {
-        return try getItem(withKey: key, forService: service, isUsingCache: isUsingCache)
+                 shouldDecryptIfNeeded: Bool = false) throws -> KeychainItem? {
+        return try getItem(withKey: key, forService: service, shouldDecryptIfNeeded: shouldDecryptIfNeeded)
     }
     
     func getAllItem(service: String,
-                    isUsingCache: Bool = true) throws -> [String: KeychainItem] {
-        return try getAllItem(service: service, isUsingCache: isUsingCache)
+                    shouldDecryptIfNeeded: Bool = false) throws -> [String: KeychainItem] {
+        return try getAllItem(service: service, shouldDecryptIfNeeded: shouldDecryptIfNeeded)
     }
 }
 
@@ -42,65 +38,38 @@ public class KeychainSecurity: KeychainAccess {
     
     private let keychainIO: KeychainIO = .init()
     
-    private lazy var secureEnclave: SecureEnclave = .init()
-    
-    private lazy var cache: KeychainCache = .init()
-    
-    public var isSetupCache: Bool = false
-    
     public func store(item: KeychainItem,
                       withSecurityLevel level: KeychainSecurityLevel) throws {
         logger.info("KeychainSecurity store \(item.key) level: \(level) - Start")
         defer { logger.info("KeychainSecurity store \(item.key) level: \(level) - Done") }
         
-        try cache.set(serviceName: item.service, item: item)
         try keychainIO.store(item: item, withSecurityLevel: level)
     }
     
     public func getItem(withKey key: String,
                         forService service: String,
-                        isUsingCache: Bool = true) throws -> KeychainItem? {
+                        shouldDecryptIfNeeded: Bool = false) throws -> KeychainItem? {
         logger.info("KeychainSecurity getItem Item k: \(key) s:\(service) - Start")
         defer { logger.info("KeychainSecurity getItem Item k: \(key) s:\(service) - Done") }
         
-        if isUsingCache,
-           let item = try cache.service(serviceName: service)?.item(key: key) {
-            return item
-        } else {
-            guard let item = try keychainIO.getItem(withKey: key, forService: service) else {
-                return nil
-            }
-            try cache.set(serviceName: service, item: item)
-            return item
-        }
+        return try keychainIO.getItem(withKey: key,
+                                      forService: service,
+                                      shouldDecryptIfNeeded: shouldDecryptIfNeeded)
     }
     
     public func getAllItem(service: String,
-                           isUsingCache: Bool = true) throws -> [String: KeychainItem] {
+                           shouldDecryptIfNeeded: Bool = false) throws -> [String: KeychainItem] {
         logger.info("KeychainSecurity getAllItem Keychain Item s:\(service) - Start")
         defer { logger.info("KeychainSecurity getAllItem Keychain Item s:\(service) - Done") }
         
-        if isUsingCache,
-           let items = try cache.service(serviceName: service)?.allItems() {
-            return items
-        } else {
-            let items = try keychainIO.getAllItem(service: service)
-            try cache.replace(serviceName: service, items: items)
-            return items
-        }
+        return try keychainIO.getAllItem(service: service,
+                                         shouldDecryptIfNeeded: shouldDecryptIfNeeded)
     }
     
     public func delete(withKey key: String, forService service: String) throws {
         logger.info("KeychainSecurity delete \(key) - Start")
         defer { logger.info("KeychainSecurity delete \(key) - Done") }
         
-        cache.delete(serviceName: service, key: key)
         try keychainIO.delete(withKey: key, forService: service)
-    }
-    
-    public func setupCache(service: String) throws {
-        let items = try keychainIO.getAllItem(service: service)
-        try cache.replace(serviceName: service, items: items)
-        isSetupCache = true
     }
 }

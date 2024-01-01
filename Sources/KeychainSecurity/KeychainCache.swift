@@ -7,12 +7,12 @@
 
 import Foundation
 
-struct KeychainCache {
+public struct KeychainCache {
     
     private var services: [String: Service] = [:]
     private let lock = NSLock()
     
-    func service(serviceName: String) -> Service? {
+    public func service(serviceName: String) -> Service? {
         lock.lock()
         logger.info("KeychainCache service(serviceName:\(serviceName)) - Start")
         defer {
@@ -22,7 +22,7 @@ struct KeychainCache {
         return services[serviceName]
     }
     
-    mutating func set(serviceName: String, item: KeychainItem) throws {
+    public mutating func set(serviceName: String, item: KeychainItem) throws {
         lock.lock()
         logger.info("KeychainCache set(serviceName:\(serviceName) key:\(item.key) - Start")
         defer {
@@ -33,7 +33,7 @@ struct KeychainCache {
         try service.set(item: item)
     }
     
-    mutating func replace(serviceName: String, items: [String: KeychainItem]) throws {
+    public mutating func replace(serviceName: String, items: [String: KeychainItem]) throws {
         lock.lock()
         logger.info("KeychainCache replace(serviceName:\(serviceName) items:\(items.count) - Start")
         defer {
@@ -46,7 +46,7 @@ struct KeychainCache {
         
     }
     
-    mutating func delete(serviceName: String, key: String) {
+    public mutating func delete(serviceName: String, key: String) {
         lock.lock()
         logger.info("KeychainCache delete(serviceName:\(serviceName) key:\(key) - Start")
         defer {
@@ -58,7 +58,7 @@ struct KeychainCache {
         self.services[serviceName] = service
     }
     
-    struct Service {
+    public struct Service {
         
         let serviceName: String
         
@@ -70,7 +70,7 @@ struct KeychainCache {
             self.serviceName = serviceName
         }
         
-        func item(key: String) throws -> KeychainItem? {
+        public func item(key: String) throws -> KeychainItem? {
             logger.info("KeychainCache item(key:\(key) - Start")
             defer {
                 logger.info("KeychainCache item(key:\(key) - Done")
@@ -84,7 +84,7 @@ struct KeychainCache {
             }
         }
         
-        func allItems() throws -> [String: KeychainItem] {
+        public func allItems() throws -> [String: KeychainItem] {
             logger.info("KeychainCache allItems - Start")
             defer {
                 logger.info("KeychainCache allItems - Done")

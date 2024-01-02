@@ -12,6 +12,8 @@ public struct KeychainCache {
     private var services: [String: Service] = [:]
     private let lock = NSLock()
     
+    public init() {}
+    
     public func service(serviceName: String) -> Service? {
         lock.lock()
         logger.info("KeychainCache service(serviceName:\(serviceName)) - Start")

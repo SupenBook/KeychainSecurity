@@ -33,6 +33,7 @@ public struct KeychainCache {
         }
         var service: Service = services[serviceName] ?? .init(serviceName: serviceName)
         try service.set(item: item)
+        services[serviceName] = service
     }
     
     public mutating func replace(serviceName: String, items: [String: KeychainItem]) throws {

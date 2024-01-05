@@ -16,7 +16,7 @@ public struct KeychainCache {
     
     public init(isNeedEncrypt: Bool = true) {
 #if targetEnvironment(simulator)
-        self.needEncrypt = false
+        self.isNeedEncrypt = false
 #else
         self.isNeedEncrypt = isNeedEncrypt
 #endif

@@ -12,7 +12,15 @@ public struct KeychainCache {
     private var services: [String: Service] = [:]
     private let lock = NSLock()
     
-    public init() {}
+    private let isNeedEncrypt: Bool
+    
+    public init(isNeedEncrypt: Bool = true) {
+#if targetEnvironment(simulator)
+        self.needEncrypt = false
+#else
+        self.isNeedEncrypt = isNeedEncrypt
+#endif
+    }
     
     public func service(serviceName: String) -> Service? {
         lock.lock()
@@ -31,7 +39,8 @@ public struct KeychainCache {
             lock.unlock()
             logger.info("KeychainCache set(serviceName:\(serviceName) key:\(item.key) - Done")
         }
-        var service: Service = services[serviceName] ?? .init(serviceName: serviceName)
+        var service: Service = services[serviceName] ?? .init(serviceName: serviceName,
+                                                              needEncrypt: isNeedEncrypt)
         try service.set(item: item)
         services[serviceName] = service
     }
@@ -43,7 +52,8 @@ public struct KeychainCache {
             lock.unlock()
             logger.info("KeychainCache replace(serviceName:\(serviceName) items:\(items.count) - Done")
         }
-        var service: Service = .init(serviceName: serviceName)
+        var service: Service = .init(serviceName: serviceName,
+                                     needEncrypt: isNeedEncrypt)
         try service.set(items: items)
         services[serviceName] = service
         
@@ -67,9 +77,10 @@ public struct KeychainCache {
         
         private var items: [String: KeychainItem] = [:]
         
-        private var needEncrypt: Bool = true
+        private let needEncrypt: Bool
         
-        fileprivate init(serviceName: String) {
+        fileprivate init(serviceName: String, needEncrypt: Bool) {
+            self.needEncrypt = needEncrypt
             self.serviceName = serviceName
         }
         

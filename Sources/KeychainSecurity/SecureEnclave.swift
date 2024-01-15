@@ -1,6 +1,6 @@
 import Foundation
 
-class SecureEnclave {
+public class SecureEnclave {
 
     public init() {}
     
@@ -31,7 +31,6 @@ class SecureEnclave {
         
         return result
     }
-
 }
 
 // MARK: - Keys

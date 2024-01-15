@@ -1,6 +1,6 @@
 //
 //  File.swift
-//  
+//
 //
 //  Created by Book on 2023/12/21.
 //
@@ -18,21 +18,21 @@ class KeychainIO {
 extension KeychainIO {
     
     func store(item: KeychainItem,
-                       withSecurityLevel level: KeychainSecurityLevel) throws {
+               withSecurityLevel level: KeychainSecurityLevel) throws {
         
-        logger.info("SetKeychain \(item.key) level: \(level) - Start")
-        defer { logger.info("SetKeychain \(item.key) level: \(level) - Done") }
+        logger.info("KeychainIO store \(item.key) level: \(level) - Start")
+        defer { logger.info("KeychainIO store \(item.key) level: \(level) - Done") }
         
         var backupItem = item
         backupItem.key = backupKey(originKey: item.key)
         let backupQuery = try storeQuery(item: backupItem, withSecurityLevel: level)
         
         var resultCode = SecItemAdd(backupQuery, nil)
-        logger.info("SetKeychain - Add \(backupItem.key) result code \(resultCode)")
+        logger.info("KeychainIO store - Add \(backupItem.key) result code \(resultCode)")
         
         if resultCode != errSecSuccess {
             let error = KeychainError(error: resultCode)
-            logger.info("SetKeychain - Error \(backupItem.key) Warn \(resultCode) \(error.localizedDescription)")
+            logger.info("KeychainIO store - Error \(backupItem.key) Warn \(resultCode) \(error.localizedDescription)")
             throw error
         }
         
@@ -41,13 +41,13 @@ extension KeychainIO {
         try delete(withKey: item.key, forService: item.service)
         
         resultCode = SecItemAdd(query, nil)
-        logger.info("SetKeychain - Add \(item.key) result code \(resultCode)")
+        logger.info("KeychainIO store - Add \(item.key) result code \(resultCode)")
         
         if resultCode == errSecSuccess {
             try delete(withKey: backupItem.key, forService: item.service)
         } else {
             let error = KeychainError(error: resultCode)
-            logger.info("SetKeychain - Error \(item.key) Warn \(resultCode) \(error.localizedDescription)")
+            logger.info("KeychainIO store - Error \(item.key) Warn \(resultCode) \(error.localizedDescription)")
             throw error
         }
     }
@@ -55,25 +55,25 @@ extension KeychainIO {
 
 //MARK: - Read
 extension KeychainIO {
-    func getItem(withKey key: String, forService service: String) throws -> KeychainItem? {
+    func getItem(withKey key: String, forService service: String, shouldDecryptIfNeeded: Bool) throws -> KeychainItem? {
         
-        logger.info("Get Keychain Item k: \(key) s:\(service) - Start")
-        defer { logger.info("Get Keychain Item k: \(key) s:\(service) - Done") }
+        logger.info("KeychainIO getItem Item k: \(key) s:\(service) - Start")
+        defer { logger.info("KeychainIO getItem Item k: \(key) s:\(service) - Done") }
         
-        if let item = try fetchItem(withKey: key, forService: service) {
+        if let item = try fetchItem(withKey: key, forService: service, shouldDecryptIfNeeded: shouldDecryptIfNeeded) {
             return item
         }
-        if let item = try fetchItem(withKey: backupKey(originKey: key), forService: service) {
-            logger.info("Get Item withKey \(key) - warn using backup key")
+        if let item = try fetchItem(withKey: backupKey(originKey: key), forService: service, shouldDecryptIfNeeded: shouldDecryptIfNeeded) {
+            logger.info("KeychainIO getItem withKey \(key) - warn using backup key")
             return item
         }
         return nil
     }
     
-    func getAllItem(service: String) throws -> [String: KeychainItem] {
+    func getAllItem(service: String?, shouldDecryptIfNeeded: Bool) throws -> [String: KeychainItem] {
         
-        logger.info("Get All Keychain Item s:\(service) - Start")
-        defer { logger.info("Get All Keychain Item s:\(service) - Done") }
+        logger.info("KeychainIO getAllItem Keychain Item s:\(service) - Start")
+        defer { logger.info("KeychainIO getAllItem Keychain Item s:\(service) - Done") }
         
         delayIfNeeded(delayTimeInSeconds: 2)
         
@@ -103,28 +103,28 @@ extension KeychainIO {
             if status == noErr {
                 
                 guard let results: [[String: Any]] = queryResult as? [[String: Any]] else {
-                    logger.info("GetAllKeychainItem s:\(service) - Warn convert to [[String:Any]]")
+                    logger.info("KeychainIO getAllItem s:\(service) - Warn convert to [[String:Any]]")
                     throw KeychainError.dataConvert
                 }
                 
                 for result in results {
                     
-                    let item = try convert(result: result)
+                    let item = try convert(result: result, shouldDecryptIfNeeded: shouldDecryptIfNeeded)
                     
                     fullResult[item.key] = item
                 }
                 
-                logger.info("GetAllKeychainItem - \(itemClass) Done rc:\(results.count)")
+                logger.info("KeychainIO getAllItem - \(itemClass) Done rc:\(results.count)")
                 
             } else if status == errSecNoSuchAttr {
                 let error = KeychainError(error: status)
-                logger.info("GetAllKeychainItem - \(itemClass) \(status) \(error.localizedDescription)")
+                logger.info("KeychainIO getAllItem - \(itemClass) \(status) \(error.localizedDescription)")
             } else if status == errSecItemNotFound {
                 let error = KeychainError(error: status)
-                logger.info("GetAllKeychainItem - \(itemClass) \(status) \(error.localizedDescription)")
+                logger.info("KeychainIO getAllItem - \(itemClass) \(status) \(error.localizedDescription)")
             } else {
                 let error = KeychainError(error: status)
-                logger.info("GetAllKeychainItem - Warn \(itemClass) \(status) \(error.localizedDescription)")
+                logger.info("KeychainIO getAllItem - Warn \(itemClass) \(status) \(error.localizedDescription)")
                 throw error
             }
         }
@@ -136,8 +136,8 @@ extension KeychainIO {
 //MARK: - Delete
 extension KeychainIO {
     func delete(withKey key: String, forService service: String) throws {
-        logger.info("DeleteKeychain \(key) - Start")
-        defer { logger.info("DeleteKeychain \(key) - Done") }
+        logger.info("KeychainIO delete \(key) - Start")
+        defer { logger.info("KeychainIO delete \(key) - Done") }
         
         var query = [String: Any]()
         
@@ -148,12 +148,12 @@ extension KeychainIO {
         let status = SecItemDelete(query as CFDictionary)
         
         if status == errSecSuccess {
-            logger.info("DeleteKeychain \(key) - errSecSuccess")
+            logger.info("KeychainIO delete \(key) - errSecSuccess")
         } else if status == errSecItemNotFound {
-            logger.info("DeleteKeychain \(key) - errSecItemNotFound")
+            logger.info("KeychainIO delete \(key) - errSecItemNotFound")
         } else {
             let error = KeychainError(error: status)
-            logger.info("DeleteKeychain k:\(key) s:\(service) - Warn \(status) \(error.localizedDescription)")
+            logger.info("KeychainIO delete k:\(key) s:\(service) - Warn \(status) \(error.localizedDescription)")
             throw error
         }
     }
@@ -198,7 +198,9 @@ extension KeychainIO {
         return query as CFDictionary
     }
     
-    private func fetchItem(withKey key: String, forService service: String) throws -> KeychainItem? {
+    private func fetchItem(withKey key: String,
+                           forService service: String,
+                           shouldDecryptIfNeeded: Bool) throws -> KeychainItem? {
         var query = [String: Any]()
         query[kSecAttrAccount as String] = key as CFString
         query[kSecAttrService as String] = service
@@ -213,43 +215,44 @@ extension KeychainIO {
         if status == errSecSuccess {
             
             guard let result = queryResult as? [String: Any] else {
-                logger.info("GetKeychainItem k:\(key) s:\(service) - Warn convert to [String:Any]")
+                logger.info("KeychainIO FetchItem k:\(key) s:\(service) - Warn convert to [String:Any]")
                 throw KeychainError.dataConvert
             }
             
-            return try convert(result: result)
+            return try convert(result: result, shouldDecryptIfNeeded: shouldDecryptIfNeeded)
             
         } else if status == errSecItemNotFound {
             return nil
         } else {
             let error = KeychainError(error: status)
-            logger.info("GetKeychainItem k:\(key) s:\(service) - Warn \(status) \(error.localizedDescription)")
+            logger.info("KeychainIO FetchItem k:\(key) s:\(service) - Warn \(status) \(error.localizedDescription)")
             throw error
         }
     }
     
-    private func convert(result: [String: Any]) throws -> KeychainItem {
+    private func convert(result: [String: Any], shouldDecryptIfNeeded: Bool) throws -> KeychainItem {
         guard let key = result[kSecAttrAccount as String] as? String else {
-            logger.info("Convert result - Warn parsing kSecAttrAccount")
+            logger.info("KeychainIO convert - Warn parsing kSecAttrAccount")
             throw KeychainError.dataConvert
         }
         
         guard let service = result[kSecAttrService as String] as? String else {
-            logger.info("Convert result k:\(key) - Warn parsing kSecAttrService")
+            logger.info("KeychainIO convert k:\(key) - Warn parsing kSecAttrService")
             throw KeychainError.dataConvert
         }
         
         guard var value = result[kSecValueData as String] as? Data else {
-            logger.info("Convert result k:\(key) s:\(service) - Warn parsing kSecValueData")
+            logger.info("KeychainIO convert k:\(key) s:\(service) - Warn parsing kSecValueData")
             throw KeychainError.dataConvert
         }
         
-        if let description = result[kSecAttrDescription as String] as? String{
+        if shouldDecryptIfNeeded,
+           let description = result[kSecAttrDescription as String] as? String{
             if description == KeychainSecurityLevel.high.attrDescription {
                 value = try secureEnclave.decrypt(value)
             }
         } else {
-            logger.info("GetKeychainItem k:\(key) s:\(service) - Warn parsing kSecAttrDescription")
+            logger.info("KeychainIO convert k:\(key) s:\(service) - Warn parsing kSecAttrDescription")
         }
         
         return .init(key: key, service: service, value: value)
@@ -266,7 +269,7 @@ extension KeychainIO {
         let currentTime = Date.now
         
         if currentTime < executableTime {
-            logger.info("Keychain Security - need delay until \(executableTime)")
+            logger.info("KeychainIO delayIfNeeded - need delay until \(executableTime)")
             Thread.sleep(until: executableTime)
         }
         

@@ -4,7 +4,7 @@ public class SecureEnclave {
 
     public init() {}
     
-    private lazy var secureEnclavePrivateKeyTag = "secureEnclavePrivateKeyTag"
+    private lazy var secureEnclavePrivateKeyTag = "KMSecureEnclavePrivateKeyTag"
     
     public func encrypt(_ message: Data) throws -> Data {
         var privateKey = try fetchPrivateKey(tag: secureEnclavePrivateKeyTag)

@@ -31,9 +31,24 @@ extension KeychainIO {
         logger.info("KeychainIO store - Add \(backupItem.key) result code \(resultCode)")
         
         if resultCode != errSecSuccess {
-            let error = KeychainError(error: resultCode)
-            logger.info("KeychainIO store - Error \(backupItem.key) Warn \(resultCode) \(error.localizedDescription)")
-            throw error
+            if resultCode == errSecDuplicateItem {
+                logger.info("KeychainIO store - Backup \(backupItem.key) already exists, attempting to update.")
+                
+                let (findQuery, attributesToUpdate) = createUpdateQueries(from: backupQuery as! [String: Any])
+                
+                let updateStatus = SecItemUpdate(findQuery, attributesToUpdate)
+                logger.info("KeychainIO store - Update Backup \(backupItem.key) result code \(updateStatus)")
+                
+                if updateStatus != errSecSuccess {
+                    let error = KeychainError(error: updateStatus)
+                    logger.error("KeychainIO store - Error updating backup \(backupItem.key): \(updateStatus) \(error.localizedDescription)")
+                    throw error
+                }
+            } else {
+                let error = KeychainError(error: resultCode)
+                logger.error("KeychainIO store - Error adding backup \(backupItem.key): \(resultCode) \(error.localizedDescription)")
+                throw error
+            }
         }
         
         let query = try storeQuery(item: item, withSecurityLevel: level)
@@ -41,13 +56,13 @@ extension KeychainIO {
         try delete(withKey: item.key, forService: item.service)
         
         resultCode = SecItemAdd(query, nil)
-        logger.info("KeychainIO store - Add \(item.key) result code \(resultCode)")
+        logger.info("KeychainIO store - Add original \(item.key) result code \(resultCode)")
         
         if resultCode == errSecSuccess {
             try delete(withKey: backupItem.key, forService: item.service)
         } else {
             let error = KeychainError(error: resultCode)
-            logger.info("KeychainIO store - Error \(item.key) Warn \(resultCode) \(error.localizedDescription)")
+            logger.error("KeychainIO store - Error adding original item \(item.key): \(resultCode) \(error.localizedDescription)")
             throw error
         }
     }
@@ -274,5 +289,19 @@ extension KeychainIO {
         }
         
         lastReadTime = Date.now
+    }
+    
+    private func createUpdateQueries(from fullQuery: [String: Any]) -> (findQuery: CFDictionary, attributesToUpdate: CFDictionary) {
+        var findQuery = [String: Any]()
+        findQuery[kSecClass as String] = fullQuery[kSecClass as String]
+        findQuery[kSecAttrAccount as String] = fullQuery[kSecAttrAccount as String]
+        findQuery[kSecAttrService as String] = fullQuery[kSecAttrService as String]
+        
+        var attributesToUpdate = fullQuery
+        attributesToUpdate.removeValue(forKey: kSecClass as String)
+        attributesToUpdate.removeValue(forKey: kSecAttrAccount as String)
+        attributesToUpdate.removeValue(forKey: kSecAttrService as String)
+        
+        return (findQuery: findQuery as CFDictionary, attributesToUpdate: attributesToUpdate as CFDictionary)
     }
 }

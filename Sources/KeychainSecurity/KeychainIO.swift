@@ -23,48 +23,38 @@ extension KeychainIO {
         logger.info("KeychainIO store \(item.key) level: \(level) - Start")
         defer { logger.info("KeychainIO store \(item.key) level: \(level) - Done") }
         
-        var backupItem = item
-        backupItem.key = backupKey(originKey: item.key)
-        let backupQuery = try storeQuery(item: backupItem, withSecurityLevel: level)
-        
-        var resultCode = SecItemAdd(backupQuery, nil)
-        logger.info("KeychainIO store - Add \(backupItem.key) result code \(resultCode)")
-        
-        if resultCode != errSecSuccess {
-            if resultCode == errSecDuplicateItem {
-                logger.info("KeychainIO store - Backup \(backupItem.key) already exists, attempting to update.")
-                
-                let (findQuery, attributesToUpdate) = createUpdateQueries(from: backupQuery as! [String: Any])
-                
-                let updateStatus = SecItemUpdate(findQuery, attributesToUpdate)
-                logger.info("KeychainIO store - Update Backup \(backupItem.key) result code \(updateStatus)")
-                
-                if updateStatus != errSecSuccess {
-                    let error = KeychainError(error: updateStatus)
-                    logger.error("KeychainIO store - Error updating backup \(backupItem.key): \(updateStatus) \(error.localizedDescription)")
-                    throw error
-                }
-            } else {
-                let error = KeychainError(error: resultCode)
-                logger.error("KeychainIO store - Error adding backup \(backupItem.key): \(resultCode) \(error.localizedDescription)")
-                throw error
-            }
-        }
-        
         let query = try storeQuery(item: item, withSecurityLevel: level)
         
-        try delete(withKey: item.key, forService: item.service)
-        
-        resultCode = SecItemAdd(query, nil)
-        logger.info("KeychainIO store - Add original \(item.key) result code \(resultCode)")
-        
+        let resultCode = SecItemAdd(query, nil)
+        logger.info("KeychainIO store - Add \(item.key) result code \(resultCode)")
+
         if resultCode == errSecSuccess {
-            try delete(withKey: backupItem.key, forService: item.service)
-        } else {
-            let error = KeychainError(error: resultCode)
-            logger.error("KeychainIO store - Error adding original item \(item.key): \(resultCode) \(error.localizedDescription)")
-            throw error
+            return
         }
+
+        if resultCode == errSecDuplicateItem {
+            guard let fullQuery = query as? [String: Any] else {
+                logger.error("KeychainIO store - Unable to cast query for update")
+                throw KeychainError.dataConvert
+            }
+
+            let (findQuery, attributesToUpdate) = createUpdateQueries(from: fullQuery)
+
+            let updateStatus = SecItemUpdate(findQuery, attributesToUpdate)
+            logger.info("KeychainIO store - Update \(item.key) result code \(updateStatus)")
+
+            if updateStatus != errSecSuccess {
+                let error = KeychainError(error: updateStatus)
+                logger.error("KeychainIO store - Error updating item \(item.key): \(updateStatus) \(error.localizedDescription)")
+                throw error
+            }
+
+            return
+        }
+
+        let error = KeychainError(error: resultCode)
+        logger.error("KeychainIO store - Error adding item \(item.key): \(resultCode) \(error.localizedDescription)")
+        throw error
     }
 }
 
@@ -75,20 +65,16 @@ extension KeychainIO {
         logger.info("KeychainIO getItem Item k: \(key) s:\(service) - Start")
         defer { logger.info("KeychainIO getItem Item k: \(key) s:\(service) - Done") }
         
-        if let item = try fetchItem(withKey: key, forService: service, shouldDecryptIfNeeded: shouldDecryptIfNeeded) {
-            return item
-        }
-        if let item = try fetchItem(withKey: backupKey(originKey: key), forService: service, shouldDecryptIfNeeded: shouldDecryptIfNeeded) {
-            logger.info("KeychainIO getItem withKey \(key) - warn using backup key")
-            return item
-        }
-        return nil
+        return try fetchItem(withKey: key,
+                             forService: service,
+                             shouldDecryptIfNeeded: shouldDecryptIfNeeded)
     }
     
     func getAllItem(service: String?, shouldDecryptIfNeeded: Bool) throws -> [String: KeychainItem] {
         
-        logger.info("KeychainIO getAllItem Keychain Item s:\(service) - Start")
-        defer { logger.info("KeychainIO getAllItem Keychain Item s:\(service) - Done") }
+        let serviceDescription = String(describing: service)
+        logger.info("KeychainIO getAllItem Keychain Item s:\(serviceDescription) - Start")
+        defer { logger.info("KeychainIO getAllItem Keychain Item s:\(serviceDescription) - Done") }
         
         delayIfNeeded(delayTimeInSeconds: 2)
         
@@ -118,7 +104,7 @@ extension KeychainIO {
             if status == noErr {
                 
                 guard let results: [[String: Any]] = queryResult as? [[String: Any]] else {
-                    logger.info("KeychainIO getAllItem s:\(service) - Warn convert to [[String:Any]]")
+                    logger.info("KeychainIO getAllItem s:\(serviceDescription) - Warn convert to [[String:Any]]")
                     throw KeychainError.dataConvert
                 }
                 
@@ -271,10 +257,6 @@ extension KeychainIO {
         }
         
         return .init(key: key, service: service, value: value)
-    }
-    
-    private func backupKey(originKey: String) -> String {
-        return originKey + "_backup"
     }
     
     private func delayIfNeeded(delayTimeInSeconds: TimeInterval) {
